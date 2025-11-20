@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>Class PT Market</title>
+<style>
+    @font-face {
+        font-family: "Keifont";
+        src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.1/keifont.woff") format("woff");
+    }
+
+    :root{
+      --bg:#000000;
+      --panel:#0f0f0f;
+      --muted:#666666;
+      --accent:#ffffff;
+      --button:#2b2b2b;
+      --button-hover:#444444;
+      --item-bg:#121212;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      padding:0;
+      background:var(--bg);
+      color:var(--accent);
+      font-family:"Keifont", "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      font-size:20px;
+    }
+
+    /* center wrapper */
+    .wrap{
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:40px;
+      box-sizing:border-box;
+    }
+
+    /* panel / page */
+    .panel{
+      width:900px;
+      max-width:95%;
+      background:var(--panel);
+      border-radius:18px;
+      padding:48px;
+      box-sizing:border-box;
+      box-shadow:0 8px 40px rgba(255,255,255,0.03);
+      text-align:center;
+    }
+
+    h1{ font-size:42px; margin:0 0 16px 0; }
+    .subtitle{ color:var(--muted); margin-bottom:24px; font-size:18px; }
+
+    /* pages inside panel */
+    .page { display:none; }
+
+    .visible { display:block; }
+
+    input, textarea, select {
+      width:640px;
+      max-width:92%;
+      padding:14px 16px;
+      border-radius:10px;
+      border:1px solid #222;
+      background:#0b0b0b;
+      color:var(--accent);
+      margin:12px 0;
+      box-sizing:border-box;
+      font-size:20px;
+    }
+
+    textarea { min-height:140px; resize:vertical; }
+
+    .controls { margin-top:18px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+
+    button {
+      background:var(--button);
+      color:var(--accent);
+      border:none;
+      padding:14px 28px;
+      border-radius:12px;
+      cursor:pointer;
+      font-size:20px;
+      min-width:180px;
+      transition:background .12s ease;
+    }
+    button:hover{ background:var(--button-hover); }
+
+    .item{
+      background:var(--item-bg);
+      border-radius:12px;
+      padding:20px;
+      margin:18px auto;
+      text-align:left;
+      width:760px;
+      max-width:92%;
+      box-sizing:border-box;
+      border:1px solid #222;
+    }
+    .item h3{ margin:0 0 8px 0; font-size:22px; }
+    .item .meta{ color:var(--muted); margin-bottom:10px; }
+
+    .small{ font-size:15px; color:var(--muted); margin-top:8px; }
+
+    select{ font-size:18px; padding:12px; }
+
+    /* responsive fallback */
+    @media (max-width:760px){
+      h1{ font-size:32px; }
+      input, textarea, select{ width:92%; }
+      .panel{ padding:28px; }
+    }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Class PT Market</h1>
+      <div class="subtitle">授業内でPTを使って情報を売買するミニマーケット</div>
+
+      <!-- Pages -->
+      <!-- Login Page -->
+      <div id="page-login" class="page visible">
+        <input id="login_id" placeholder="ユーザーID (8桁)">
+        <input id="login_pw" type="password" placeholder="パスワード">
+        <div class="controls">
+          <button onclick="handleLogin()">ログイン</button>
+          <button onclick="goRegister()">新規登録</button>
+        </div>
+        <div id="login_msg" class="small"></div>
+      </div>
+
+      <!-- Register Page -->
+      <div id="page-register" class="page">
+        <input id="reg_id" placeholder="ユーザーID（8桁）">
+        <input id="reg_pw" type="password" placeholder="パスワード">
+        <div class="controls">
+          <button onclick="handleRegister()">登録する（初期PT 200）</button>
+          <button onclick="showPage('page-login')">戻る</button>
+        </div>
+        <div id="reg_msg" class="small"></div>
+      </div>
+
+      <!-- Home Page -->
+      <div id="page-home" class="page">
+        <div id="home_header">
+          <div style="font-size:22px;margin-bottom:8px;">ようこそ、<b id="home_user"></b> さん</div>
+          <div style="font-size:24px;margin-bottom:14px;"><b id="home_pt"></b> PT</div>
+        </div>
+        <div class="controls">
+          <button onclick="showPage('page-buy')">🛒 買う</button>
+          <button onclick="showPage('page-sell')">📤 売る</button>
+          <button onclick="logout()">ログアウト</button>
+        </div>
+        <div id="admin_area" style="margin-top:22px;"></div>
+        <div class="small">（サイトは localStorage に保存されます）</div>
+      </div>
+
+      <!-- Buy Page -->
+      <div id="page-buy" class="page">
+        <div style="font-size:22px;margin-bottom:12px;">出品一覧</div>
+        <div id="buy_list_container"></div>
+        <div class="controls">
+          <button onclick="showPage('page-home')">ホームへ戻る</button>
+        </div>
+      </div>
+
+      <!-- Sell Page -->
+      <div id="page-sell" class="page">
+        <div style="font-size:22px;margin-bottom:12px;">出品する</div>
+        <input id="sell_title" placeholder="タイトル">
+        <textarea id="sell_detail" placeholder="説明（任意）"></textarea>
+        <input id="sell_price" placeholder="価格 (PT)">
+        <div class="controls">
+          <button onclick="handleSell()">出品する</button>
+          <button onclick="showPage('page-home')">ホームへ戻る</button>
+        </div>
+        <div id="sell_msg" class="small"></div>
+      </div>
+
+      <!-- Admin Page -->
+      <div id="page-admin" class="page">
+        <div style="font-size:22px;margin-bottom:12px;">管理者メニュー</div>
+        <div style="margin-bottom:12px;">
+          <select id="admin_user_select"></select>
+        </div>
+        <input id="admin_new_pt" placeholder="新しいPTを入力">
+        <div class="controls">
+          <button onclick="adminChangePT()">変更する</button>
+          <button onclick="showPage('page-home')">ホームへ戻る</button>
+        </div>
+        <div id="admin_msg" class="small"></div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/* -----------------------
+   Initialization & helpers
+   ----------------------- */
+
+// Ensure clean structure and initial admin user
+(function initStorage(){
+  try{
+    if(!localStorage.users){
+      // admin preset + sample user (optional)
+      const preset = {
+        "20140110": { pw: "0810", pt: 99999 } // 管理者
+      };
+      localStorage.setItem("users", JSON.stringify(preset));
+    } else {
+      // ensure admin exists and has correct pw if missing
+      const u = JSON.parse(localStorage.users);
+      if(!u["20140110"]) u["20140110"] = { pw: "0810", pt: 99999 };
+      // if admin exists but pw differs, reset to correct admin pw for reliability
+      if(u["20140110"].pw !== "0810") u["20140110"].pw = "0810";
+      localStorage.setItem("users", JSON.stringify(u));
+    }
+
+    if(!localStorage.items) localStorage.setItem("items", JSON.stringify([]));
+  }catch(e){
+    alert("localStorage の初期化に失敗しました: " + e.message);
+  }
+})();
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.page').forEach(p => p.style.display='none');
+  const el = document.getElementById(id);
+  if(el){ el.style.display = 'block'; el.classList.add('visible'); }
+  // small housekeeping
+  if(id === 'page-home') refreshHome();
+  if(id === 'page-buy') renderBuyList();
+  if(id === 'page-admin') populateAdminUsers();
+}
+
+/* -----------------------
+   Auth: register / login
+   ----------------------- */
+function handleRegister(){
+  const id = (document.getElementById('reg_id').value || '').trim();
+  const pw = (document.getElementById('reg_pw').value || '').trim();
+  const msg = document.getElementById('reg_msg');
+
+  msg.textContent = "";
+  if(!/^[\S]{1,}$/.test(id) || id.length === 0){
+    msg.textContent = "ID を入力してください";
+    return;
+  }
+  if(id.length !== 8){
+    msg.textContent = "ID は 8 文字で入力してください";
+    return;
+  }
+  if(!pw){
+    msg.textContent = "パスワードを入力してください";
+    return;
+  }
+
+  const users = JSON.parse(localStorage.users);
+  if(users[id]){
+    msg.textContent = "その ID は既に使われています";
+    return;
+  }
+
+  users[id] = { pw: pw, pt: 200 }; // 初期 PT = 200
+  localStorage.users = JSON.stringify(users);
+
+  msg.textContent = "登録完了！ログイン画面へ移動します";
+  setTimeout(()=> showPage('page-login'), 900);
+}
+
+function handleLogin(){
+  const id = (document.getElementById('login_id').value || '').trim();
+  const pw = (document.getElementById('login_pw').value || '').trim();
+  const msg = document.getElementById('login_msg');
+
+  msg.textContent = "";
+
+  const users = JSON.parse(localStorage.users);
+  if(!users[id] || users[id].pw !== pw){
+    msg.textContent = "ID またはパスワードが間違っています";
+    return;
+  }
+
+  // save current user
+  localStorage.currentUser = id;
+  // show admin button only for exact admin credentials
+  if(id === "20140110" && pw === "0810"){
+    document.getElementById('admin_area').innerHTML = `<button onclick="showPage('page-admin')">管理者メニュー</button>`;
+  } else {
+    document.getElementById('admin_area').innerHTML = '';
+  }
+
+  showPage('page-home');
+}
+
+/* -----------------------
+   Home / refresh
+   ----------------------- */
+function refreshHome(){
+  const id = localStorage.currentUser || '';
+  if(!id){ showPage('page-login'); return; }
+  const users = JSON.parse(localStorage.users);
+  if(!users[id]){ showPage('page-login'); return; }
+  document.getElementById('home_user').innerText = id;
+  document.getElementById('home_pt').innerText = users[id].pt + " PT";
+}
+
+/* -----------------------
+   Selling
+   ----------------------- */
+function handleSell(){
+  const title = (document.getElementById('sell_title').value || '').trim();
+  const detail = (document.getElementById('sell_detail').value || '').trim();
+  const price = Number(document.getElementById('sell_price').value);
+  const msg = document.getElementById('sell_msg');
+
+  msg.textContent = "";
+  if(!title){ msg.textContent = "タイトルを入力してください"; return; }
+  if(isNaN(price) || price <= 0){ msg.textContent = "正しい価格を入力してください"; return; }
+
+  const items = JSON.parse(localStorage.items);
+  items.unshift({
+    title: title,
+    detail: detail,
+    price: price,
+    seller: localStorage.currentUser,
+    createdAt: Date.now()
+  });
+  localStorage.items = JSON.stringify(items);
+
+  msg.textContent = "出品しました";
+  setTimeout(()=> { document.getElementById('sell_title').value=''; document.getElementById('sell_detail').value=''; document.getElementById('sell_price').value=''; showPage('page-home'); }, 700);
+}
+
+/* -----------------------
+   Buying
+   ----------------------- */
+function renderBuyList(){
+  const container = document.getElementById('buy_list_container');
+  container.innerHTML = '';
+  const items = JSON.parse(localStorage.items);
+  if(items.length === 0){
+    container.innerHTML = '<div class="small">出品がまだありません</div>';
+    return;
+  }
+  items.forEach((it, idx) => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <h3>${escapeHtml(it.title)}</h3>
+      <div class="meta">${escapeHtml(it.detail)}</div>
+      <div class="meta">価格: <b>${it.price} PT</b>　出品: ${escapeHtml(it.seller)}</div>
+      <div style="margin-top:10px;">
+        ${ it.seller !== localStorage.currentUser ? `<button onclick="buyItem(${idx})">購入する</button>` : '<span class="small">（自分の出品）</span>' }
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function buyItem(index){
+  const users = JSON.parse(localStorage.users);
+  const items = JSON.parse(localStorage.items);
+
+  const buyer = localStorage.currentUser;
+  if(!buyer){ alert("ログインしてください"); showPage('page-login'); return; }
+
+  const item = items[index];
+  if(!item){ alert("商品が見つかりません"); renderBuyList(); return; }
+
+  if(users[buyer].pt < item.price){
+    alert("PTが足りません");
+    return;
+  }
+  // transfer
+  users[buyer].pt -= item.price;
+  if(!users[item.seller]){ // seller missing (shouldn't), refund to system
+    // do nothing special
+  } else {
+    users[item.seller].pt += item.price;
+  }
+  localStorage.users = JSON.stringify(users);
+
+  // remove item (simulate sold)
+  items.splice(index, 1);
+  localStorage.items = JSON.stringify(items);
+
+  alert("購入しました！");
+  refreshHome();
+  renderBuyList();
+}
+
+/* -----------------------
+   Admin
+   ----------------------- */
+function populateAdminUsers(){
+  // only allow if logged in as admin
+  if(localStorage.currentUser !== "20140110"){
+    alert("管理者ではありません");
+    showPage('page-login');
+    return;
+  }
+  const users = JSON.parse(localStorage.users);
+  const sel = document.getElementById('admin_user_select');
+  sel.innerHTML = '';
+  Object.keys(users).forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u;
+    opt.textContent = `${u}  — PT: ${users[u].pt}`;
+    sel.appendChild(opt);
+  });
+}
+
+function adminChangePT(){
+  if(localStorage.currentUser !== "20140110"){
+    alert("管理者ではありません");
+    showPage('page-login');
+    return;
+  }
+  const sel = document.getElementById('admin_user_select');
+  const newPt = Number(document.getElementById('admin_new_pt').value);
+  const users = JSON.parse(localStorage.users);
+  const target = sel.value;
+
+  if(!target || isNaN(newPt)){ document.getElementById('admin_msg').innerText = "有効なユーザーとPTを選んでください"; return; }
+  users[target].pt = newPt;
+  localStorage.users = JSON.stringify(users);
+  document.getElementById('admin_msg').innerText = "PTを変更しました";
+  populateAdminUsers();
+}
+
+/* -----------------------
+   Utility
+   ----------------------- */
+function logout(){
+  localStorage.removeItem('currentUser');
+  // clear admin button
+  document.getElementById('admin_area').innerHTML = '';
+  showPage('page-login');
+}
+
+function goRegister(){ showPage('page-register'); }
+
+function escapeHtml(str){
+  if(!str) return '';
+  return str.replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]; });
+}
+
+// initial redirect: show login
+showPage('page-login');
+
+</script>
+</body>
+</html>
